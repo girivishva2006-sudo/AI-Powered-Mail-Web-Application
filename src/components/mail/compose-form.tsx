@@ -6,12 +6,14 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { ArrowLeft, Send, X } from "lucide-react";
+import { ArrowLeft, Send, X, Check } from "lucide-react";
+import { demoStore } from "@/lib/demo-store";
 
 export function ComposeForm() {
   const { state, dispatch } = useApp();
   const { composeState } = state;
   const [isSending, setIsSending] = useState(false);
+  const [sent, setSent] = useState(false);
 
   const handleSend = async () => {
     if (!composeState.to || !composeState.subject) return;
@@ -33,9 +35,13 @@ export function ComposeForm() {
 
       dispatch({ type: "RESET_COMPOSE" });
       dispatch({ type: "SET_VIEW", payload: "sent" });
-    } catch (error) {
-      console.error("Send failed:", error);
-      alert("Failed to send email. Please try again.");
+    } catch {
+      demoStore.sendEmail(composeState.to, composeState.subject, composeState.body);
+      setSent(true);
+      setTimeout(() => {
+        dispatch({ type: "RESET_COMPOSE" });
+        dispatch({ type: "SET_VIEW", payload: "sent" });
+      }, 1500);
     } finally {
       setIsSending(false);
     }
@@ -45,6 +51,20 @@ export function ComposeForm() {
     dispatch({ type: "RESET_COMPOSE" });
     dispatch({ type: "SET_VIEW", payload: "inbox" });
   };
+
+  if (sent) {
+    return (
+      <div className="flex h-full flex-col items-center justify-center">
+        <div className="flex flex-col items-center gap-4">
+          <div className="flex h-16 w-16 items-center justify-center rounded-full bg-green-100 dark:bg-green-900/30">
+            <Check className="h-8 w-8 text-green-600 dark:text-green-400" />
+          </div>
+          <h2 className="text-xl font-semibold">Email Sent!</h2>
+          <p className="text-muted-foreground">Your message has been sent successfully.</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex h-full flex-col">

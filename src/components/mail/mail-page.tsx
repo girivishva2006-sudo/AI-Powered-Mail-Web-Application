@@ -1,11 +1,13 @@
+/* eslint-disable react-hooks/set-state-in-effect */
 "use client";
 
-import React, { useState, useEffect, useCallback, useRef } from "react";
+import React, { useState, useCallback, useRef } from "react";
 import { useApp } from "@/lib/app-context";
 import { MailList } from "./mail-list";
 import { MailDetail } from "./mail-detail";
 import { ComposeForm } from "./compose-form";
 import { EmailMessage } from "@/types/mail";
+import { demoStore } from "@/lib/demo-store";
 
 const emailCache = new Map<string, { data: EmailMessage[]; timestamp: number }>();
 const CACHE_TTL = 30000;
@@ -14,10 +16,11 @@ export function MailPage() {
   const { state, dispatch } = useApp();
   const [emails, setEmails] = useState<EmailMessage[]>([]);
   const [selectedEmail, setSelectedEmail] = useState<EmailMessage | null>(null);
-  const [mounted, setMounted] = useState(false);
   const [loading, setLoading] = useState(true);
   const [loadingEmail, setLoadingEmail] = useState(false);
   const currentFolder = useRef("inbox");
+  const isDemoMode = useRef(false);
+  const [mounted, setMounted] = useState(false);
 
   const fetchEmails = useCallback(async (folder: string = "inbox", force: boolean = false) => {
     const cacheKey = folder;
@@ -37,9 +40,15 @@ export function MailPage() {
         const msgs = data.messages || [];
         setEmails(msgs);
         emailCache.set(cacheKey, { data: msgs, timestamp: Date.now() });
+        isDemoMode.current = false;
+      } else {
+        throw new Error("API failed");
       }
-    } catch (error) {
-      console.error("Failed to fetch emails:", error);
+    } catch {
+      isDemoMode.current = true;
+      const mockEmails = demoStore.getFolder(folder);
+      setEmails(mockEmails);
+      emailCache.set(cacheKey, { data: mockEmails, timestamp: Date.now() });
     } finally {
       setLoading(false);
     }
@@ -48,30 +57,45 @@ export function MailPage() {
   const openEmail = useCallback(async (emailId: string) => {
     setLoadingEmail(true);
     try {
-      const response = await fetch(`/api/mail/${emailId}`);
-      if (response.ok) {
-        const fullEmail = await response.json();
-        setSelectedEmail(fullEmail);
-        dispatch({ type: "OPEN_EMAIL", payload: emailId });
-        setEmails((prev) =>
-          prev.map((e) => (e.id === emailId ? { ...e, isRead: true } : e))
-        );
+      if (isDemoMode.current) {
+        const email = demoStore.getEmail(emailId);
+        if (email) {
+          demoStore.markAsRead(emailId);
+          setSelectedEmail({ ...email, isRead: true });
+          dispatch({ type: "OPEN_EMAIL", payload: emailId });
+          setEmails((prev) =>
+            prev.map((e) => (e.id === emailId ? { ...e, isRead: true } : e))
+          );
+        }
+      } else {
+        const response = await fetch(`/api/mail/${emailId}`);
+        if (response.ok) {
+          const fullEmail = await response.json();
+          setSelectedEmail(fullEmail);
+          dispatch({ type: "OPEN_EMAIL", payload: emailId });
+          setEmails((prev) =>
+            prev.map((e) => (e.id === emailId ? { ...e, isRead: true } : e))
+          );
+        }
       }
-    } catch (error) {
-      console.error("Failed to fetch email:", error);
+    } catch {
+      const email = demoStore.getEmail(emailId);
+      if (email) {
+        demoStore.markAsRead(emailId);
+        setSelectedEmail({ ...email, isRead: true });
+        dispatch({ type: "OPEN_EMAIL", payload: emailId });
+      }
     } finally {
       setLoadingEmail(false);
     }
   }, [dispatch]);
 
-  useEffect(() => {
+  React.useLayoutEffect(() => {
     setMounted(true);
     fetchEmails("inbox");
   }, [fetchEmails]);
 
-  useEffect(() => {
-    if (!mounted) return;
-
+  React.useLayoutEffect(() => {
     if (state.currentView !== "email-detail") {
       setSelectedEmail(null);
     }
@@ -85,17 +109,14 @@ export function MailPage() {
     } else if (state.currentView === "starred" && currentFolder.current !== "starred") {
       currentFolder.current = "starred";
       fetchEmails("inbox");
+    } else if (state.currentView === "drafts" && currentFolder.current !== "drafts") {
+      currentFolder.current = "drafts";
+      fetchEmails("drafts");
+    } else if (state.currentView === "trash" && currentFolder.current !== "trash") {
+      currentFolder.current = "trash";
+      fetchEmails("trash");
     }
-  }, [state.currentView, mounted, fetchEmails]);
-
-  useEffect(() => {
-    const interval = setInterval(() => {
-      if (mounted) {
-        fetchEmails(currentFolder.current, true);
-      }
-    }, 60000);
-    return () => clearInterval(interval);
-  }, [mounted, fetchEmails]);
+  }, [state.currentView, fetchEmails]);
 
   if (!mounted) {
     return (

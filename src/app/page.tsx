@@ -1,6 +1,6 @@
 "use client";
 
-import React, { Suspense } from "react";
+import React, { Suspense, useState, useEffect } from "react";
 import { signIn, useSession } from "next-auth/react";
 import { useSearchParams } from "next/navigation";
 import { AppProvider } from "@/lib/app-context";
@@ -10,11 +10,42 @@ import { MailHeader } from "@/components/mail/mail-header";
 import { AssistantPanel } from "@/components/assistant/assistant-panel";
 import { MailPage } from "@/components/mail/mail-page";
 import { Button } from "@/components/ui/button";
-import { Mail, AlertCircle } from "lucide-react";
+import { Mail, AlertCircle, Play, Moon, Sun } from "lucide-react";
+import Link from "next/link";
+
+function ThemeToggle() {
+  const [darkMode, setDarkMode] = useState(() => {
+    if (typeof window !== "undefined") {
+      return localStorage.getItem("darkMode") === "true";
+    }
+    return false;
+  });
+
+  useEffect(() => {
+    if (darkMode) {
+      document.documentElement.classList.add("dark");
+    } else {
+      document.documentElement.classList.remove("dark");
+    }
+    localStorage.setItem("darkMode", String(darkMode));
+  }, [darkMode]);
+
+  return (
+    <Button
+      variant="ghost"
+      size="icon"
+      onClick={() => setDarkMode(!darkMode)}
+      className="fixed top-4 right-4 z-50"
+    >
+      {darkMode ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
+    </Button>
+  );
+}
 
 function AccessDenied() {
   return (
     <div className="flex min-h-screen items-center justify-center bg-background">
+      <ThemeToggle />
       <div className="w-full max-w-md space-y-6 rounded-lg border bg-card p-8 shadow-lg text-center">
         <div className="flex justify-center">
           <div className="flex h-16 w-16 items-center justify-center rounded-full bg-destructive/10">
@@ -31,6 +62,11 @@ function AccessDenied() {
         <Button onClick={() => signIn("google")} variant="outline" className="w-full">
           Try Another Account
         </Button>
+        <Link href="/demo">
+          <Button variant="ghost" className="w-full mt-2">
+            Try Demo Mode Instead
+          </Button>
+        </Link>
       </div>
     </div>
   );
@@ -39,6 +75,7 @@ function AccessDenied() {
 function LoginScreen() {
   return (
     <div className="flex min-h-screen items-center justify-center bg-background">
+      <ThemeToggle />
       <div className="w-full max-w-md space-y-8 rounded-lg border bg-card p-8 shadow-lg">
         <div className="flex flex-col items-center text-center">
           <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-primary/10">
@@ -77,8 +114,15 @@ function LoginScreen() {
             Sign in with Google
           </Button>
 
+          <Link href="/demo">
+            <Button variant="outline" className="w-full" size="lg">
+              <Play className="mr-2 h-4 w-4" />
+              Try Demo Mode
+            </Button>
+          </Link>
+
           <p className="text-center text-xs text-muted-foreground">
-            Sign in with your Google account to continue.
+            Sign in with your Google account or try the demo to explore.
           </p>
         </div>
       </div>

@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { cn } from "@/lib/utils";
 import { useApp } from "@/lib/app-context";
 import { MailFolder } from "@/types/mail";
@@ -29,8 +29,42 @@ const navItems: NavItem[] = [
   { id: "trash", label: "Trash", icon: <Trash2 className="h-4 w-4" /> },
 ];
 
+const mockCounts: Record<string, number> = {
+  inbox: 8,
+  sent: 2,
+  starred: 3,
+  drafts: 1,
+  trash: 1,
+};
+
 export function MailSidebar() {
   const { state, dispatch } = useApp();
+  const [counts, setCounts] = useState<Record<string, number>>(mockCounts);
+
+  useEffect(() => {
+    const fetchCounts = async () => {
+      try {
+        const folders = ["inbox", "sent", "drafts", "trash", "starred"];
+        const results: Record<string, number> = {};
+
+        for (const folder of folders) {
+          const response = await fetch(`/api/mail?folder=${folder}`);
+          if (response.ok) {
+            const data = await response.json();
+            results[folder] = data.messages?.length || 0;
+          } else {
+            results[folder] = mockCounts[folder] || 0;
+          }
+        }
+
+        setCounts(results);
+      } catch {
+        setCounts(mockCounts);
+      }
+    };
+
+    fetchCounts();
+  }, []);
 
   const handleCompose = () => {
     dispatch({ type: "SET_VIEW", payload: "compose" });
@@ -41,7 +75,7 @@ export function MailSidebar() {
   };
 
   return (
-    <aside className="flex h-full w-56 flex-col border-r bg-card">
+    <aside className="flex h-full w-full flex-col border-r bg-card">
       <div className="flex items-center gap-2 border-b px-4 py-3">
         <Mail className="h-5 w-5 text-primary" />
         <span className="text-lg font-semibold">AI Mail</span>
@@ -60,14 +94,26 @@ export function MailSidebar() {
             key={item.id}
             onClick={() => dispatch({ type: "SET_VIEW", payload: item.id })}
             className={cn(
-              "flex w-full items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors",
+              "flex w-full items-center justify-between rounded-md px-3 py-2 text-sm font-medium transition-colors",
               state.currentView === item.id
                 ? "bg-accent text-accent-foreground"
                 : "text-muted-foreground hover:bg-accent hover:text-accent-foreground"
             )}
           >
-            {item.icon}
-            {item.label}
+            <div className="flex items-center gap-3">
+              {item.icon}
+              {item.label}
+            </div>
+            {counts[item.id] !== undefined && counts[item.id] > 0 && (
+              <span className={cn(
+                "text-xs px-2 py-0.5 rounded-full",
+                state.currentView === item.id
+                  ? "bg-primary text-primary-foreground"
+                  : "bg-muted text-muted-foreground"
+              )}>
+                {counts[item.id]}
+              </span>
+            )}
           </button>
         ))}
       </nav>

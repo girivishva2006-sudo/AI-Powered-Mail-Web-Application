@@ -1,8 +1,50 @@
 # AI Mail - AI-Powered Email Client
 
-A modern email client where an AI assistant can control the UI through natural language.
+An intelligent email client where an AI assistant controls the UI through natural language commands. Built with Next.js 16, React 19, and Gmail API integration.
 
-## Architecture Overview
+## Live Demo
+
+**[Try the Demo](https://ai-powered-mail-web-application-imbk.onrender.com/demo)** - No login required, uses mock data to showcase all features.
+
+> **Note**: The full Gmail integration requires Google OAuth verification. The demo mode lets you explore all UI features instantly.
+
+---
+
+## Features
+
+- **AI Assistant** - Control the entire UI with natural language commands
+- **Gmail Integration** - Read, send, search, star, and delete real emails
+- **Smart Compose** - AI-assisted email composition with reply/forward
+- **Dark/Light Mode** - Toggle between themes, persists preference
+- **Responsive Design** - Collapsible sidebar, adaptive layouts
+- **Real-time Search** - Instant email filtering by sender, subject, content
+- **Folder Management** - Inbox, Sent, Drafts, Trash, Starred with counts
+- **Demo Mode** - Full feature access without login for showcasing
+
+---
+
+## Screenshots
+
+### Login Screen
+![Login Screen](screenshots/login.png)
+
+### Main Inbox View
+![Inbox View](screenshots/inbox.png)
+
+### AI Assistant in Action
+![AI Assistant](screenshots/assistant.png)
+
+### Dark Mode
+![Dark Mode](screenshots/dark-mode.png)
+
+### Demo Mode
+![Demo Mode](screenshots/demo.png)
+
+---
+
+## Architecture
+
+### High-Level Overview
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
@@ -29,168 +71,354 @@ A modern email client where an AI assistant can control the UI through natural l
 └─────────────────────────────────────────────────────────────────┘
 ```
 
-## Tech Stack
+### Tech Stack
 
-- **Frontend**: Next.js 16, React 19, TypeScript, Tailwind CSS, shadcn/ui
-- **Backend**: Next.js API Routes, Node.js
-- **Database**: PostgreSQL, Prisma ORM
-- **Auth**: NextAuth.js v5 with Google OAuth
-- **Email**: Gmail API
-- **AI**: Custom agent with tool calling architecture
+| Layer | Technology | Why |
+|-------|-----------|-----|
+| **Frontend** | Next.js 16, React 19 | Server components, App Router, latest React features |
+| **Styling** | Tailwind CSS, shadcn/ui | Rapid UI development, consistent design system |
+| **State** | React Context API | Built-in, no extra deps, perfect for AI tool integration |
+| **Auth** | NextAuth.js v4 | Seamless Google OAuth, session management |
+| **Database** | PostgreSQL + Prisma | Type-safe ORM, easy schema management |
+| **Email** | Gmail API | Direct integration with user's Gmail |
+| **Deployment** | Render | Free tier, easy setup, auto-deploys from GitHub |
 
-## AI Agent Architecture
+---
 
-The AI assistant uses a tool-based agent architecture:
+## Local Setup
 
-1. **User sends a message** via the chat interface
-2. **Agent processes intent** and determines which tools to call
-3. **Tools execute actions** (search, open, compose, etc.)
-4. **Application state updates** in response to tool execution
-5. **UI re-renders** to reflect the new state
+### Prerequisites
 
-### Available Tools
+- Node.js 18+ (recommended: 20)
+- npm or yarn
+- PostgreSQL (local or cloud like Neon)
+- Google Cloud Console account
 
-| Tool | Description |
-|------|-------------|
-| `get_current_view` | Get current application state |
-| `search_emails` | Search emails with filters |
-| `get_email` | Get specific email by ID |
-| `get_latest_email` | Get latest email from sender |
-| `open_email` | Open and display an email |
-| `open_compose` | Open compose form |
-| `fill_compose_form` | Fill compose fields |
-| `send_email` | Send email (with confirmation) |
-| `open_reply` | Open reply form |
-| `fill_reply` | Fill reply body |
-| `mark_as_read` | Mark email as read |
-| `navigate_to_view` | Navigate to different view |
-| `get_current_email_context` | Get current email context |
+### Step 1: Clone & Install
 
-## Gmail OAuth Setup
+```bash
+git clone https://github.com/girivishva2006-sudo/AI-Powered-Mail-Web-Application.git
+cd ai-mail
+npm install
+```
+
+### Step 2: Database Setup
+
+```bash
+# Generate Prisma client
+npx prisma generate
+
+# Push schema to database
+npx prisma db push
+```
+
+### Step 3: Google OAuth Setup
 
 1. Go to [Google Cloud Console](https://console.cloud.google.com)
 2. Create a new project or select existing
-3. Enable Gmail API
-4. Create OAuth 2.0 credentials
-5. Add authorized redirect URI: `http://localhost:3000/api/auth/callback/google`
-6. Copy Client ID and Client Secret to `.env`
+3. Navigate to **APIs & Services > Credentials**
+4. Click **Create Credentials > OAuth 2.0 Client ID**
+5. Configure consent screen:
+   - User Type: External
+   - App name: Your app name
+   - Add your email as test user
+6. Create OAuth 2.0 Client ID:
+   - Application type: Web application
+   - Authorized redirect URIs: `http://localhost:3000/api/auth/callback/google`
+7. Copy Client ID and Client Secret
 
-### Required OAuth Scopes
+### Step 4: Environment Variables
 
-- `openid`
-- `email`
-- `profile`
-- `https://www.googleapis.com/auth/gmail.readonly`
-- `https://www.googleapis.com/auth/gmail.send`
-- `https://www.googleapis.com/auth/gmail.modify`
+```bash
+cp .env.example .env
+```
 
-## Environment Variables
+Edit `.env` with your credentials:
 
 ```bash
 # Database
 DATABASE_URL="postgresql://user:password@localhost:5432/ai_mail"
 
 # Google OAuth
-GOOGLE_CLIENT_ID=""
-GOOGLE_CLIENT_SECRET=""
+GOOGLE_CLIENT_ID="your-client-id"
+GOOGLE_CLIENT_SECRET="your-client-secret"
 
 # NextAuth
 NEXTAUTH_URL="http://localhost:3000"
-NEXTAUTH_SECRET=""
+NEXTAUTH_SECRET="random-secret-string"
 
-# AI Provider
-AI_PROVIDER="openai"
-AI_API_KEY=""
+# Access Control (empty = allow all)
+ALLOWED_EMAILS=""
 ```
 
-## Local Setup
+### Step 5: Run Development Server
 
 ```bash
-# 1. Clone the repository
-git clone <repo-url>
-cd ai-mail
-
-# 2. Install dependencies
-npm install
-
-# 3. Set up database
-npx prisma generate
-npx prisma db push
-
-# 4. Configure environment
-cp .env.example .env
-# Edit .env with your credentials
-
-# 5. Run development server
 npm run dev
 ```
 
-## Running the Application
+Open [http://localhost:3000](http://localhost:3000)
 
-```bash
-# Development
-npm run dev
+### Quick Start (Demo Mode)
 
-# Production build
-npm run build
-npm start
+Want to try it immediately without setup? Use the **[Live Demo](https://ai-powered-mail-web-application-imbk.onrender.com/demo)** - no configuration needed!
+
+---
+
+## AI Assistant Guide
+
+The AI assistant uses a **tool-based agent architecture**. Here's how it works:
+
+### How It Works
+
+1. **User sends message** via chat interface
+2. **Agent parses intent** and determines which tools to call
+3. **Tools execute actions** on the application
+4. **State updates** trigger UI re-renders
+5. **Response generated** summarizing what happened
+
+### Available Commands
+
+| Category | Commands | Example |
+|----------|----------|---------|
+| **Search** | Show, Find, Search, About | "Show unread emails" |
+| **Filter** | Unread, From, Starred | "Find emails from Sarah" |
+| **Open** | Open, Go to | "Open email from David" |
+| **Navigate** | Sent, Drafts, Inbox | "Go to sent folder" |
+| **Compose** | Send, Write, Compose | "Send email to john@example.com" |
+| **Reply** | Reply, Respond | "Reply saying I'll be there" |
+
+### Example Interactions
+
+```
+User: "Show me all unread emails"
+AI: [Searches inbox, filters unread, displays list]
+
+User: "Find emails from Sarah about the project"
+AI: [Filters by sender + keyword, shows results]
+
+User: "Send an email to john@example.com with subject 'Meeting Update'"
+AI: [Opens compose form, fills recipient and subject]
+
+User: "Reply to the latest email saying I'll be there at 3pm"
+AI: [Opens reply form, fills response body]
 ```
 
-## Real-Time Sync Architecture
+### Tool Architecture
 
-The application includes an abstraction layer for real-time mail synchronization:
-
+```typescript
+// Tools are defined with schemas and execute against app state
+const tools = {
+  search_emails: { query, sender, unreadOnly },
+  navigate_to_view: { view: "inbox" | "sent" | "starred" },
+  open_email: { emailId },
+  open_compose: { to, subject, body },
+  // ... more tools
+};
 ```
-MailSyncService (Interface)
-├── GmailSyncService (Gmail Implementation)
-│   ├── Google Pub/Sub for push notifications
-│   └── Polling fallback for development
-└── MailProvider (Future implementations)
-```
 
-For development, a polling mechanism can be used. In production, Google Pub/Sub provides push notifications.
+---
+
+## Architecture Decisions & Trade-offs
+
+### 1. Context API vs Redux/Zustand
+
+**Decision**: Used React Context API for state management.
+
+**Why**:
+- Built into React, zero extra dependencies
+- Perfect for this app's state complexity
+- Easy integration with AI tool execution (tools dispatch actions directly)
+
+**Trade-off**:
+- Less efficient for frequent updates (not an issue here)
+- No devtools like Redux (acceptable for project scope)
+
+### 2. Tool-Based Agent vs Direct Function Calls
+
+**Decision**: Implemented tool-based agent architecture instead of direct function calls.
+
+**Why**:
+- **Extensibility**: Easy to add new capabilities without modifying core logic
+- **Transparency**: Users see exactly what tools are executed
+- **Type Safety**: Strongly typed tool schemas prevent errors
+- **Testability**: Each tool can be tested independently
+
+**Trade-off**:
+- More initial setup complexity
+- Slightly slower than direct function calls (negligible)
+
+### 3. Mock Data for Demo vs Full Backend
+
+**Decision**: Created a demo mode with mock data instead of requiring full backend setup.
+
+**Why**:
+- Anyone can try the app immediately without Google OAuth
+- Perfect for interviews and demonstrations
+- No database or API keys required
+
+**Trade-off**:
+- Mock data is static (not real-time)
+- Some features limited in demo mode
+
+### 4. Next.js 16 with App Router
+
+**Decision**: Used Next.js 16 with App Router instead of Pages Router.
+
+**Why**:
+- Server components for better performance
+- Built-in API routes (no separate backend needed)
+- Better TypeScript support
+- Modern React patterns
+
+**Trade-off**:
+- Newer, less community resources than Pages Router
+- Some learning curve for App Router patterns
+
+### 5. Regex-Based AI vs LLM Integration
+
+**Decision**: Implemented regex-based intent parsing instead of actual LLM API calls.
+
+**Why**:
+- **Zero cost**: No API fees for AI processing
+- **Instant responses**: No network latency
+- **Reliable**: Deterministic, no hallucinations
+- **Demo-friendly**: Works offline, no API keys needed
+
+**Trade-off**:
+- Less flexible than actual LLM
+- Can't handle complex natural language
+- Requires predefined patterns
+
+**Future**: Easy to swap in OpenAI/Anthropic by replacing the `processUserMessage` function.
+
+---
 
 ## Security Considerations
 
-- OAuth tokens are stored server-side only
-- API keys never exposed to the browser
-- All Gmail operations go through authenticated API routes
-- Input validation on all tool parameters
-- Session-based authentication with NextAuth
+- **OAuth tokens** stored server-side only (never exposed to browser)
+- **API keys** environment variables, never committed to git
+- **Session-based auth** with NextAuth.js
+- **Input validation** on all tool parameters
+- **Rate limiting** via Gmail API quotas
+- **CORS** configured for production domain only
 
-## Design Decisions
+---
 
-### Why Tool-Based Agent Architecture?
+## Project Structure
 
-Instead of regex-based intent routing, we use a tool-based agent:
+```
+ai-mail/
+├── src/
+│   ├── app/
+│   │   ├── api/
+│   │   │   ├── auth/[...nextauth]/  # NextAuth route
+│   │   │   ├── mail/                # Gmail API endpoints
+│   │   │   └── ai/chat/             # AI assistant endpoint
+│   │   ├── demo/                    # Demo mode (no auth)
+│   │   └── page.tsx                 # Main login/app
+│   ├── components/
+│   │   ├── assistant/               # AI chat panel
+│   │   ├── mail/                    # Email components
+│   │   └── ui/                      # shadcn/ui components
+│   ├── lib/
+│   │   ├── auth/                    # NextAuth config
+│   │   ├── demo-store.ts            # Mock data store
+│   │   └── app-context.tsx          # State management
+│   └── types/                       # TypeScript types
+├── prisma/                          # Database schema
+├── public/                          # Static assets
+└── .env.example                     # Environment template
+```
 
-1. **Extensibility**: Easy to add new capabilities
-2. **Type Safety**: Strongly typed tool schemas
-3. **Flexibility**: LLM determines optimal tool usage
-4. **Transparency**: Users see which tools are executed
-5. **Maintainability**: No complex pattern matching code
+---
 
-### Why Context API for State?
+## What I'd Improve With More Time
 
-- Built into React, no extra dependencies
-- Centralized state management
-- Easy integration with AI tool execution
-- Predictable state updates
+### High Priority
 
-## Known Limitations
+1. **Real LLM Integration**
+   - Replace regex-based AI with OpenAI/Anthropic API
+   - Add conversation memory for context-aware responses
+   - Implement streaming responses for better UX
 
-- Gmail API rate limits apply
-- Real-time sync requires Google Pub/Sub setup
-- AI responses are template-based (can be enhanced with actual LLM)
-- No attachment handling in compose yet
+2. **Email Threading**
+   - Group emails by conversation
+   - Show reply chains in thread view
+   - Support inline replies within threads
 
-## Future Improvements
+3. **Attachment Support**
+   - Upload files in compose
+   - View/download attachments
+   - Preview images and PDFs
 
-- [ ] Integrate actual LLM provider (OpenAI, Anthropic)
-- [ ] Implement Google Pub/Sub for real-time sync
-- [ ] Add attachment support
-- [ ] Implement email threading
-- [ ] Add keyboard shortcuts
-- [ ] Support multiple email providers
-- [ ] Add email scheduling
-- [ ] Implement email templates
+### Medium Priority
+
+4. **Real-Time Sync**
+   - Google Pub/Sub for instant notifications
+   - WebSocket updates for multi-device sync
+   - Offline support with service workers
+
+5. **Keyboard Shortcuts**
+   - `j/k` - Navigate up/down
+   - `Enter` - Open email
+   - `c` - Compose
+   - `r` - Reply
+   - `/` - Search
+
+6. **Email Scheduling**
+   - Schedule emails for later
+   - Recurring emails
+   - Time zone awareness
+
+### Low Priority
+
+7. **Multi-Account Support**
+   - Add multiple Gmail accounts
+   - Switch between accounts
+   - Unified inbox view
+
+8. **Advanced Features**
+   - Email templates
+   - Snooze emails
+   - Smart categories (Promotions, Social, etc.)
+   - Contact management
+   - Calendar integration
+
+9. **Performance Optimizations**
+   - Virtual scrolling for large inboxes
+   - Lazy loading email bodies
+   - Image optimization
+   - Bundle size reduction
+
+10. **Testing**
+    - Unit tests for tools and utils
+    - Integration tests for API routes
+    - E2E tests with Playwright
+    - Accessibility testing
+
+---
+
+## Contributing
+
+1. Fork the repository
+2. Create a feature branch (`git checkout -b feature/amazing`)
+3. Commit changes (`git commit -m 'Add amazing feature'`)
+4. Push to branch (`git push origin feature/amazing`)
+5. Open a Pull Request
+
+---
+
+## License
+
+MIT License - see [LICENSE](LICENSE) for details
+
+---
+
+## Acknowledgments
+
+- [Next.js](https://nextjs.org/) - The React framework
+- [shadcn/ui](https://ui.shadcn.com/) - Beautiful components
+- [Tailwind CSS](https://tailwindcss.com/) - Utility-first CSS
+- [Prisma](https://www.prisma.io/) - Database ORM
+- [NextAuth.js](https://next-auth.js.org/) - Authentication

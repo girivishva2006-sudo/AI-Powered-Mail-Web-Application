@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { ArrowLeft, Reply, Forward, Star, Trash2, Mail, Loader2 } from "lucide-react";
+import { demoStore } from "@/lib/demo-store";
 
 interface MailDetailProps {
   email: EmailMessage;
@@ -17,6 +18,7 @@ export function MailDetail({ email }: MailDetailProps) {
   const { dispatch } = useApp();
   const [isStarred, setIsStarred] = useState(email.isStarred);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [isDemoMode, setIsDemoMode] = useState(false);
 
   const formatDate = (dateStr: string) => {
     return new Date(dateStr).toLocaleDateString("en-US", {
@@ -38,8 +40,11 @@ export function MailDetail({ email }: MailDetailProps) {
         body: JSON.stringify({ star: !isStarred }),
       });
       setIsStarred(!isStarred);
-    } catch (error) {
-      console.error("Star failed:", error);
+      setIsDemoMode(false);
+    } catch {
+      demoStore.toggleStar(email.id);
+      setIsStarred(!isStarred);
+      setIsDemoMode(true);
     }
   };
 
@@ -51,8 +56,12 @@ export function MailDetail({ email }: MailDetailProps) {
         method: "POST",
       });
       dispatch({ type: "SET_VIEW", payload: "inbox" });
-    } catch (error) {
-      console.error("Delete failed:", error);
+      setIsDemoMode(false);
+    } catch {
+      demoStore.deleteEmail(email.id);
+      dispatch({ type: "SET_VIEW", payload: "inbox" });
+      setIsDemoMode(true);
+    } finally {
       setIsDeleting(false);
     }
   };

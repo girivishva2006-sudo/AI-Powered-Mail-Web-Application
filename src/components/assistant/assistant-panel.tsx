@@ -1,193 +1,173 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
 import React, { useState, useRef, useEffect } from "react";
 import { useApp } from "@/lib/app-context";
-import { AssistantMessage } from "@/types/app";
-import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { Avatar } from "@/components/ui/avatar";
-import { Bot, Loader2, Wrench } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Send, Loader2, Mail, Search, FileText, MessageSquare, ArrowRight } from "lucide-react";
 
-function SendIcon(props: React.SVGProps<SVGSVGElement>) {
-  return (
-    <svg
-      xmlns="http://www.w3.org/2000/svg"
-      width="24"
-      height="24"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      {...props}
-    >
-      <path d="m22 2-7 20-4-9-9-4Z" />
-      <path d="M22 2 11 13" />
-    </svg>
-  );
+interface ToolCall {
+  id: string;
+  name: string;
+  args: Record<string, any>;
+  status: "completed" | "error";
+  result?: any;
+}
+
+interface ChatMessage {
+  id: string;
+  role: "user" | "assistant";
+  content: string;
+  timestamp: Date;
+  toolCalls?: ToolCall[];
 }
 
 export function AssistantPanel() {
-  const { state, dispatch } = useApp();
-  const [input, setInput] = useState("");
-  const [isProcessing, setIsProcessing] = useState(false);
-  const scrollRef = useRef<HTMLDivElement>(null);
+  const { dispatch } = useApp();
+  const [messages, setMessages] = useState<ChatMessage[]>([
+    {
+      id: "welcome",
+      role: "assistant",
+      content: "**Welcome to AI Mail Assistant!**\n\nI can help you with:\n\n**Search & Filter:**\n- \"Show unread emails\"\n- \"Find emails from Sarah\"\n- \"Search about project\"\n\n**Open & Navigate:**\n- \"Open email from David\"\n- \"Go to sent folder\"\n\n**Compose:**\n- \"Send email to john@example.com\"\n- \"Reply saying I'll be there\"",
+      timestamp: new Date(),
+    },
+  ]);
+  const [inputValue, setInputValue] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    if (scrollRef.current) {
-      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
-    }
-  }, [state.assistantMessages]);
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages]);
 
-  const sendMessage = async () => {
-    if (!input.trim() || isProcessing) return;
+  const processStateChanges = (stateChanges: any[]) => {
+    stateChanges.forEach((change) => {
+      if (change.type === "SET_VIEW") {
+        dispatch({ type: "SET_VIEW", payload: change.payload });
+      } else if (change.type === "SET_FILTERS") {
+        dispatch({ type: "SET_FILTERS", payload: change.payload });
+      } else if (change.type === "OPEN_EMAIL") {
+        dispatch({ type: "OPEN_EMAIL", payload: change.payload });
+      } else if (change.type === "UPDATE_COMPOSE") {
+        dispatch({ type: "UPDATE_COMPOSE", payload: change.payload });
+      }
+    });
+  };
 
-    const userMessage: AssistantMessage = {
-      id: `msg-${Date.now()}`,
+  const handleSendMessage = async () => {
+    if (!inputValue.trim() || isLoading) return;
+
+    const userMessage: ChatMessage = {
+      id: `user-${Date.now()}`,
       role: "user",
-      content: input.trim(),
-      timestamp: new Date().toISOString(),
+      content: inputValue,
+      timestamp: new Date(),
     };
 
-    dispatch({ type: "ADD_ASSISTANT_MESSAGE", payload: userMessage });
-    setInput("");
-    setIsProcessing(true);
+    setMessages((prev) => [...prev, userMessage]);
+    const currentInput = inputValue;
+    setInputValue("");
+    setIsLoading(true);
 
     try {
       const response = await fetch("/api/ai/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          message: input.trim(),
-          context: {
-            currentView: state.currentView,
-            currentEmailId: state.currentEmailId,
-            searchQuery: state.searchQuery,
-          },
-        }),
+        body: JSON.stringify({ message: currentInput }),
       });
 
-      if (!response.ok) {
-        throw new Error(`Failed to get response: ${response.status}`);
-      }
+      if (!response.ok) throw new Error("Failed to get response");
 
       const data = await response.json();
 
-      const assistantMessage: AssistantMessage = {
-        id: `msg-${Date.now()}-assistant`,
+      if (data.stateChanges && data.stateChanges.length > 0) {
+        processStateChanges(data.stateChanges);
+      }
+
+      const assistantMessage: ChatMessage = {
+        id: `assistant-${Date.now()}`,
         role: "assistant",
         content: data.message,
+        timestamp: new Date(),
         toolCalls: data.toolCalls,
-        timestamp: new Date().toISOString(),
       };
 
-      dispatch({ type: "ADD_ASSISTANT_MESSAGE", payload: assistantMessage });
-
-      if (data.stateChanges) {
-        data.stateChanges.forEach((change: { type: string; payload: unknown }) => {
-          dispatch(change as Parameters<typeof dispatch>[0]);
-        });
-      }
-    } catch (error) {
-      const errorMessage: AssistantMessage = {
-        id: `msg-${Date.now()}-error`,
-        role: "system",
+      setMessages((prev) => [...prev, assistantMessage]);
+    } catch {
+      const errorMessage: ChatMessage = {
+        id: `error-${Date.now()}`,
+        role: "assistant",
         content: "Sorry, I encountered an error. Please try again.",
-        timestamp: new Date().toISOString(),
+        timestamp: new Date(),
       };
-      dispatch({ type: "ADD_ASSISTANT_MESSAGE", payload: errorMessage });
+      setMessages((prev) => [...prev, errorMessage]);
     } finally {
-      setIsProcessing(false);
+      setIsLoading(false);
     }
   };
 
-  const renderToolCall = (toolCall: AssistantMessage["toolCalls"]) => {
-    if (!toolCall) return null;
-    return toolCall.map((tc) => (
-      <div
-        key={tc.id}
-        className="flex items-center gap-2 text-xs text-muted-foreground bg-muted rounded px-2 py-1 mt-1"
-      >
-        <Wrench className="h-3 w-3" />
-        <span>{tc.name}</span>
-        <span className="text-green-500">
-          {tc.status === "completed" ? "✓" : tc.status === "running" ? "..." : tc.status === "error" ? "✗" : "○"}
-        </span>
-      </div>
-    ));
+  const handleKeyPress = (e: React.KeyboardEvent) => {
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      handleSendMessage();
+    }
   };
 
-  if (!state.isAssistantOpen) {
-    return null;
-  }
+  const getToolIcon = (toolName: string) => {
+    switch (toolName) {
+      case "search_emails": return <Search className="h-3 w-3" />;
+      case "navigate_to_view": return <ArrowRight className="h-3 w-3" />;
+      case "open_email": return <Mail className="h-3 w-3" />;
+      case "open_compose": case "open_reply": return <FileText className="h-3 w-3" />;
+      default: return <MessageSquare className="h-3 w-3" />;
+    }
+  };
 
   return (
-    <aside className="flex h-full w-80 flex-col border-l bg-card">
-      <div className="flex items-center gap-2 border-b px-4 py-3">
-        <Bot className="h-5 w-5 text-primary" />
-        <span className="text-sm font-semibold">AI Assistant</span>
+    <div className="flex flex-col h-full">
+      <div className="flex-1 overflow-auto p-4 space-y-4">
+        {messages.map((msg) => (
+          <div key={msg.id} className={`flex flex-col ${msg.role === "user" ? "items-end" : "items-start"}`}>
+            <div className={`max-w-[85%] rounded-lg p-3 ${msg.role === "user" ? "bg-primary text-primary-foreground" : "bg-muted"}`}>
+              <p className="text-sm whitespace-pre-wrap">{msg.content}</p>
+            </div>
+            {msg.toolCalls && msg.toolCalls.length > 0 && (
+              <div className="mt-2 space-y-1">
+                {msg.toolCalls.map((tc) => (
+                  <div key={tc.id} className="flex items-center gap-2 text-xs text-muted-foreground">
+                    <span className="flex h-4 w-4 items-center justify-center rounded-full bg-primary/10 text-primary">
+                      {getToolIcon(tc.name)}
+                    </span>
+                    <span>{tc.name.replace(/_/g, " ")}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        ))}
+        {isLoading && (
+          <div className="flex justify-start">
+            <div className="flex items-center gap-2 rounded-lg bg-muted p-3">
+              <Loader2 className="h-4 w-4 animate-spin" />
+              <span className="text-sm">Thinking...</span>
+            </div>
+          </div>
+        )}
+        <div ref={messagesEndRef} />
       </div>
-
-      <ScrollArea className="flex-1 p-4" ref={scrollRef}>
-        <div className="space-y-4">
-          {state.assistantMessages.length === 0 && (
-            <div className="text-center text-muted-foreground py-8">
-              <Bot className="h-12 w-12 mx-auto mb-3 opacity-50" />
-              <p className="text-sm font-medium">How can I help you?</p>
-              <p className="text-xs mt-1">
-                Try: &quot;Show me unread emails from this week&quot;
-              </p>
-            </div>
-          )}
-
-          {state.assistantMessages.map((msg) => (
-            <div key={msg.id} className="flex gap-3">
-              <Avatar
-                fallback={msg.role === "user" ? "U" : "AI"}
-                size="sm"
-                className={msg.role === "assistant" ? "bg-primary" : ""}
-              />
-              <div className="flex-1">
-                <p className="text-sm font-medium capitalize">{msg.role === "system" ? "System" : msg.role}</p>
-                <p className="text-sm mt-1 whitespace-pre-wrap">{msg.content}</p>
-                {msg.toolCalls && renderToolCall(msg.toolCalls)}
-              </div>
-            </div>
-          ))}
-
-          {isProcessing && (
-            <div className="flex gap-3">
-              <Avatar fallback="AI" size="sm" />
-              <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                <Loader2 className="h-4 w-4 animate-spin" />
-                Thinking...
-              </div>
-            </div>
-          )}
-        </div>
-      </ScrollArea>
 
       <div className="border-t p-4">
-        <form
-          onSubmit={(e) => {
-            e.preventDefault();
-            sendMessage();
-          }}
-          className="flex gap-2"
-        >
-          <Input
-            placeholder="Ask me anything..."
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            disabled={isProcessing}
-          />
-          <Button type="submit" size="icon" disabled={!input.trim() || isProcessing}>
-            <SendIcon className="h-4 w-4" />
+        <div className="flex gap-2">
+          <Input placeholder="Ask about emails..." value={inputValue} onChange={(e) => setInputValue(e.target.value)} onKeyPress={handleKeyPress} disabled={isLoading} />
+          <Button size="icon" onClick={handleSendMessage} disabled={!inputValue.trim() || isLoading}>
+            <Send className="h-4 w-4" />
           </Button>
-        </form>
+        </div>
+        <p className="mt-2 text-xs text-muted-foreground">
+          AI assistant for email management
+        </p>
       </div>
-    </aside>
+    </div>
   );
 }

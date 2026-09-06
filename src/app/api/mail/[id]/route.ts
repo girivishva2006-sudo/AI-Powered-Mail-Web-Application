@@ -46,7 +46,7 @@ export async function GET(
     let body = "";
     let bodyHtml = "";
 
-    function extractParts(part: any) {
+    function extractParts(part: { mimeType?: string; body?: { data?: string }; parts?: Array<{ mimeType?: string; body?: { data?: string }; parts?: Array<{ mimeType?: string; body?: { data?: string }; parts?: Array<{ mimeType?: string; body?: { data?: string } }> }> }> }) {
       if (!part) return;
       if (part.mimeType === "text/plain" && part.body?.data) {
         body = decodeBase64Url(part.body.data);
