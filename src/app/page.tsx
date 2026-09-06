@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { Suspense } from "react";
 import { signIn, useSession } from "next-auth/react";
 import { useSearchParams } from "next/navigation";
 import { AppProvider } from "@/lib/app-context";
@@ -78,7 +78,7 @@ function LoginScreen() {
           </Button>
 
           <p className="text-center text-xs text-muted-foreground">
-            Only authorized users can access this application.
+            Sign in with your Google account to continue.
           </p>
         </div>
       </div>
@@ -107,7 +107,7 @@ function AppContent() {
   );
 }
 
-export default function Home() {
+function HomeContent() {
   const { data: session, status } = useSession();
   const searchParams = useSearchParams();
   const error = searchParams.get("error");
@@ -129,4 +129,18 @@ export default function Home() {
   }
 
   return <AppContent />;
+}
+
+export default function Home() {
+  return (
+    <Suspense
+      fallback={
+        <div className="flex min-h-screen items-center justify-center bg-background">
+          <div className="animate-pulse text-muted-foreground">Loading...</div>
+        </div>
+      }
+    >
+      <HomeContent />
+    </Suspense>
+  );
 }
