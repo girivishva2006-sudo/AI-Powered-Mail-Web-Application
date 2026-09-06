@@ -1,0 +1,13 @@
+version: "3.8"
+
+services:
+  web:
+    build: .
+    ports:
+      - "3000:3000"
+    environment:
+      - DATABASE_URL=postgresql://postgres:password@localhost:5432/ai_mail
+      - NEXTAUTH_URL=http://localhost:3000
+      - NEXTAUTH_SECRET=your-secret-here
+      - GOOGLE_CLIENT_ID=your-client-id
+      - GOOGLE_CLIENT_SECRET=your-client-secret
